@@ -190,33 +190,6 @@ You also need to configure the mapping override in your application configuratio
                 original: Akeneo\Pim\Enrichment\Component\Category\Model\CategoryTranslation
                 override: Acme\Bundle\CatalogBundle\Entity\CategoryTranslation
 
-Define the Category Class
-*************************
-
-You need to update your category entity parameter used in ``entities.yml`` file:
-
-.. literalinclude:: ../../src/Acme/Bundle/CatalogBundle/Resources/config/entities.yml
-   :language: yaml
-   :prepend: # /src/Acme/Bundle/CatalogBundle/Resources/config/entities.yml
-   :lines: 1,3,4
-   :linenos:
-
-.. important::
-   If you are creating a new bundle, double check that this file is inside the extension
-
-   .. code-block:: php
-
-       # /src/Acme/Bundle/CatalogBundle/DependencyInjection/AcmeAppExtension.php
-       public function load(array $configs, ContainerBuilder $container)
-       {
-           /** ... **/
-           $loader->load('entities.yml');
-       }
-
-.. note::
-   You don't have to add a lot of code to the Doctrine configuration to resolve target entities.
-   We already have a resolver which injects the new category class name.
-
 Now, you can run the following commands to update your database:
 
 .. code-block:: bash
@@ -242,8 +215,8 @@ Then, you have to override the service definition of your form:
     pim_enrich.form.type.category:
         class: 'Acme\Bundle\EnrichBundle\Form\Type\CategoryType'
         arguments:
-            - '%pim_catalog.entity.category.class%'
-            - '%pim_catalog.entity.category_translation.class%'
+            - 'Acme\Bundle\CatalogBundle\Entity\Category'
+            - 'Acme\Bundle\CatalogBundle\Entity\CategoryTranslation'
         tags:
             - { name: form.type, alias: pim_category }
 
@@ -264,7 +237,7 @@ You also need to update the controller dependency injection:
 
     # /src/Akeneo/Pim/Enrichment/Bundle/Resources/config/controllers.yml
     pim_enrich.controller.category_tree.product:
-        class: '%pim_enrich.controller.category_tree.class%'
+        class: 'Akeneo\Pim\Enrichment\Bundle\Controller\Ui\CategoryTreeController'
         arguments:
             - '@event_dispatcher'
             - '@pim_user.context.user'
