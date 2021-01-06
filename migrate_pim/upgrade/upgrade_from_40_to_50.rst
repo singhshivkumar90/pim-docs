@@ -186,18 +186,7 @@ Installing Rector
 
 .. code:: bash
 
-    composer require --dev rector/rector:0.7.25
-
-
-Making sure all classes are loadable
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The following command checks that all classes can be properly loaded by PHP
-without generating a fatal error:
-
-.. code:: bash
-
-    vendor/bin/rector scan-fatal-errors src/
+    composer require --dev rector/rector
 
 If any fatal error are detected, you will have to fix them before doing the next step.
 

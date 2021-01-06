@@ -2,6 +2,7 @@ UID = $(shell id -u)
 GID = $(shell id -g)
 DOCKER_IMAGE = pim-docs
 DOCKER_RUN = docker run -it --rm -u $(UID):$(GID)
+DOCKER_RUN_SSH = docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE)
 
 .DEFAULT_GOAL := build
 .PHONY: build, deploy, docker-build, update-versions
@@ -19,8 +20,7 @@ build: lint
 
 deploy: build update-versions
 	docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete /home/akeneo/pim-docs/data/pim-docs-build/ akeneo@$${HOSTNAME}:/var/www/${VERSION}
- #VERSION_FILE=version2.json && [ master == $CIRCLE_BRANCH ] && VERSION_LABEL=master || VERSION_LABEL=v${CIRCLE_BRANCH}  && (find  $VERSION_FILE || printf "[\n]" > $VERION_FILE) && (grep -n $CIRCLE_BRANCH $VERSION_FILE || perl -pi -e ' s/ }\n/},\n  { "label": "$VERSION_NAME", "url": "\/$CIRCLE_BRANCH\/index.html" },\n/' $VERSION_FILE )
-VERSION_FILE=version2.json && [ master == $CIRCLE_BRANCH ] && VERSION_LABEL=master || VERSION_LABEL=v${CIRCLE_BRANCH}  && (find  $VERSION_FILE 2>/dev/null || printf "[\n]\n" > $VERSION_FILE) && (grep -n $CIRCLE_BRANCH $VERSION_FILE || perl -pi -e ' s/ }\n/},\n  { "label": "$VERSION_NAME", "url": "\/$CIRCLE_BRANCH\/index.html" },\n/' $VERSION_FILE )
+
 lint: docker-build
 	rm -rf pim-docs-build && mkdir pim-docs-build
 	rm -rf pim-docs-lint && mkdir pim-docs-lint
@@ -30,6 +30,6 @@ docker-build:
 	docker build . --tag $(DOCKER_IMAGE)
 
 update-versions:
-	docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete akeneo@$${HOSTNAME}:/var/www/versions.php /home/akeneo/pim-docs/data
+	$(DOCKER_RUN_SSH) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete akeneo@$${HOSTNAME}:/var/www/versions.php /home/akeneo/pim-docs/data
 	$(DOCKER_RUN)  -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) php scripts/update-doc-versions.php $(CIRCLE_BRANCH) versions.json
-	docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete /home/akeneo/pim-docs/data/versions.php akeneo@$${HOSTNAME}:/var/www/
+	$(DOCKER_RUN_SSH) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete /home/akeneo/pim-docs/data/versions.php akeneo@$${HOSTNAME}:/var/www/
