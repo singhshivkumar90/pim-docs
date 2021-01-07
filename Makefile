@@ -2,7 +2,8 @@ UID = $(shell id -u)
 GID = $(shell id -g)
 DOCKER_IMAGE = pim-docs
 DOCKER_RUN = docker run -it --rm -u $(UID):$(GID)
-DOCKER_RUN_SSH = docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE)
+DOCKER_RUN_AS_AKENEO = docker run -it --rm
+SSH_RSYNC_PARAM = -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data  rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete
 
 .DEFAULT_GOAL := build
 .PHONY: build, deploy, docker-build, update-versions
@@ -19,7 +20,7 @@ build: lint
 	@echo "\nYou are now ready to check the documentation locally in the directory \"pim-docs-build/\" and to deploy it with \"HOSTNAME=foo.com PORT=1985 VERSION=bar make deploy\"."
 
 deploy: build update-versions
-	docker run -it --rm -v $${SSH_AUTH_SOCK}:/ssh-auth.sock:ro -e SSH_AUTH_SOCK=/ssh-auth.sock -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete /home/akeneo/pim-docs/data/pim-docs-build/ akeneo@$${HOSTNAME}:/var/www/${VERSION}
+	$(DOCKER_RUN_AKENEO) $(SSH_RSYNC_PARAM)  /home/akeneo/pim-docs/data/pim-docs-build/ akeneo@$${HOSTNAME}:/var/www/${VERSION}
 
 lint: docker-build
 	rm -rf pim-docs-build && mkdir pim-docs-build
@@ -30,6 +31,6 @@ docker-build:
 	docker build . --tag $(DOCKER_IMAGE)
 
 update-versions:
-	$(DOCKER_RUN_SSH) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete akeneo@$${HOSTNAME}:/var/www/versions.php /home/akeneo/pim-docs/data
-	$(DOCKER_RUN)  -v $(PWD):/home/akeneo/pim-docs/data $(DOCKER_IMAGE) php scripts/update-doc-versions.php $(CIRCLE_BRANCH) versions.json
-	$(DOCKER_RUN_SSH) rsync -e "ssh -q -p $${PORT} -o StrictHostKeyChecking=no" -qarz --delete /home/akeneo/pim-docs/data/versions.php akeneo@$${HOSTNAME}:/var/www/
+	$(DOCKER_RUN_AS_AKENEO) $(SSH_RSYNC_PARAM) akeneo@$${HOSTNAME}:/var/www/versions.json /home/akeneo/pim-docs/data/
+	$(DOCKER_RUN_AS_AKENEO) -v $(PWD):/home/akeneo/pim-docs $(DOCKER_IMAGE) php ./scripts/update-doc-versions.php $(CIRCLE_BRANCH) versions.json
+	$(DOCKER_RUN_AS_AKENEO) $(SSH_RSYNC_PARAM) /home/akeneo/pim-docs/data/versions.json akeneo@$${HOSTNAME}:/var/www/
