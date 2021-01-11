@@ -190,6 +190,7 @@ Installing Rector
 
 If any fatal error are detected, you will have to fix them before doing the next step.
 
+
 Applying automatic fixes
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
